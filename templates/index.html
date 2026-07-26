@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PennyBook — Simplified Finance</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/chart.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <img src="/static/logo.png" alt="PennyBook Logo" style="width: 40px; height: 40px; border-radius: 8px; object-fit: contain;">
+                <div>
+                    <h1 class="logo-text">PennyBook</h1>
+                    <p class="logo-tagline">Deterministic calculations</p>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h1v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7h1a1 1 0 0 0 .707-1.707l-9-9a.999.999 0 0 0-1.414 0l-9 9A1 1 0 0 0 3 13zm7 7v-5h4v5h-4zm2-15.586 6 6V20h-2v-5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v5H6v-9.586l6-6z"/></svg>
+                    Dashboard <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">1</kbd>
+                </a>
+                <a href="#ledger" class="nav-item" data-tab="ledger">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2zm0-4H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2zm0 8H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>
+                    Ledger & Accounts <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">2</kbd>
+                </a>
+                <a href="#split" class="nav-item" data-tab="split">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 2H5c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V4c0-1.103-.897-2-2-2zM5 20V4h14l.002 16H5z"/><path d="M11 6h2v12h-2zm-4 4h10v2H7z"/></svg>
+                    Split Groups <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">3</kbd>
+                </a>
+                <a href="#planning" class="nav-item" data-tab="planning">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M13 7h-2v6h6v-2h-4z"/></svg>
+                    Planning Targets <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">4</kbd>
+                </a>
+                <a href="#balance" class="nav-item" data-tab="balance">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 7H4v2h16V7zm0 4H4v2h16v-2zm0-8H4v2h16V3z"/></svg>
+                    Assets & Debts <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">5</kbd>
+                </a>
+            </nav>
+            <div class="sidebar-footer" style="flex-direction:column; align-items:flex-start; gap:4px; min-height: 60px;">
+                <div><span class="status-indicator"></span> Verified Engine</div>
+                <div style="font-size:10px; color:var(--text-muted);">Press <kbd style="background:rgba(255,255,255,0.06); padding:1px 3px; border-radius:2px;">H</kbd> for Keyboard Help</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-info">
+                    <h2 id="current-section-title">Dashboard</h2>
+                    <p class="current-date" id="header-date">July 26, 2026</p>
+                </div>
+                <div class="quick-stats">
+                    <div class="quick-stat-card">
+                        <span class="label">Net Worth</span>
+                        <span class="value cyan-text" id="header-net-worth">₹0.00</span>
+                    </div>
+                    <div class="quick-stat-card">
+                        <span class="label">Savings Rate</span>
+                        <span class="value green-text" id="header-savings-rate">0%</span>
+                    </div>
+                    <div class="quick-stat-card">
+                        <span class="label">Monthly Cash Flow</span>
+                        <span class="value orange-text" id="header-cash-flow">+₹0.00</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Screens -->
+            <div class="screen-container">
+                
+                <!-- 1. DASHBOARD SCREEN -->
+                <section id="screen-dashboard" class="screen active">
+                    <!-- Key stats cards -->
+                    <div class="stats-grid">
+                        <div class="card stat-card glow-cyan">
+                            <h3>Assets (Accounts & Invests)</h3>
+                            <p class="stat-value" id="dash-assets">₹0.00</p>
+                            <span class="stat-meta">Live balance</span>
+                        </div>
+                        <div class="card stat-card glow-magenta">
+                            <h3>Liabilities (Credit & Debts)</h3>
+                            <p class="stat-value" id="dash-liabilities">₹0.00</p>
+                            <span class="stat-meta">Verified calculations</span>
+                        </div>
+                        <div class="card stat-card">
+                            <h3>Daily Burn Rate</h3>
+                            <p class="stat-value" id="dash-burn-rate">₹0.00/day</p>
+                            <span class="stat-meta"><span id="dash-days-elapsed">0</span> days elapsed</span>
+                        </div>
+                        <div class="card stat-card">
+                            <h3>Remaining Daily Budget</h3>
+                            <p class="stat-value" id="dash-remaining-daily-budget">₹0.00/day</p>
+                            <span class="stat-meta"><span id="dash-days-left">0</span> days left</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-details-grid">
+                        <div class="card chart-card">
+                            <h3>Monthly Cash Flow trends</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="dashFlowChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card list-card">
+                            <h3>Mathematical Insights</h3>
+                            <div class="insights-container" id="dash-insights">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Embed Calculators directly on Dashboard -->
+                    <div class="dashboard-details-grid" style="margin-top: 24px;">
+                        <div class="card">
+                            <h3>EMI Loan Calculator</h3>
+                            <form id="calc-loan-form" onsubmit="runLoanCalc(event)" style="margin-top: 15px;">
+                                <div class="horizontal-form" style="gap:10px;">
+                                    <div class="form-group">
+                                        <label>Amount (₹)</label>
+                                        <input type="number" id="lc-principal" min="1" value="10000" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rate (% p.a)</label>
+                                        <input type="number" id="lc-rate" step="0.01" min="0" value="10" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Tenure (Mos)</label>
+                                        <input type="number" id="lc-months" min="1" value="12" required>
+                                    </div>
+                                    <div class="form-group" style="flex:0; min-width:100px;">
+                                        <button type="submit" class="btn btn-primary" style="width:100%; height:41px;">EMI</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="calc-results-box" id="loan-results" style="display: none; flex-direction:row; justify-content:space-around;">
+                                <div class="metric" style="flex-direction:column; align-items:center;">
+                                    <span class="label">EMI</span>
+                                    <span class="value magenta-text" id="lc-res-emi">₹0.00</span>
+                                </div>
+                                <div class="metric" style="flex-direction:column; align-items:center;">
+                                    <span class="label">Total Cost</span>
+                                    <span class="value green-text" id="lc-res-total">₹0.00</span>
+                                </div>
+                                <div class="metric" style="flex-direction:column; align-items:center;">
+                                    <span class="label">Total Interest</span>
+                                    <span class="value orange-text" id="lc-res-interest">₹0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Compound Interest Calculator</h3>
+                            <form id="calc-compound-form" onsubmit="runCompoundCalc(event)" style="margin-top: 15px;">
+                                <div class="horizontal-form" style="gap:10px;">
+                                    <div class="form-group">
+                                        <label>Principal (₹)</label>
+                                        <input type="number" id="cc-principal" min="1" value="1000" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rate (%)</label>
+                                        <input type="number" id="cc-rate" step="0.01" min="0" value="5" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Years</label>
+                                        <input type="number" id="cc-years" step="0.1" min="0.1" value="5" required>
+                                    </div>
+                                    <input type="hidden" id="cc-frequency" value="12">
+                                    <div class="form-group" style="flex:0; min-width:100px;">
+                                        <button type="submit" class="btn btn-primary" style="width:100%; height:41px;">Grow</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div class="calc-results-box" id="compound-results" style="display: none; flex-direction:row; justify-content:space-around;">
+                                <div class="metric" style="flex-direction:column; align-items:center;">
+                                    <span class="label">Maturity Value</span>
+                                    <span class="value green-text" id="cc-res-total">₹0.00</span>
+                                </div>
+                                <div class="metric" style="flex-direction:column; align-items:center;">
+                                    <span class="label">Interest Earned</span>
+                                    <span class="value cyan-text" id="cc-res-interest">₹0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" id="amortization-table-card" style="margin-top: 24px; display: none;">
+                        <h3>Loan Amortization Schedule</h3>
+                        <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>EMI Payment</th>
+                                        <th>Principal Paid</th>
+                                        <th>Interest Paid</th>
+                                        <th>Remaining Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="amortization-schedule-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. CONSOLIDATED LEDGER & ACCOUNTS SCREEN -->
+                <section id="screen-ledger" class="screen">
+                    <div class="dashboard-details-grid" style="grid-template-columns: 1fr 2fr;">
+                        <!-- Accounts Sidebar panel -->
+                        <div class="accounts-panel">
+                            <div class="screen-header-inline">
+                                <h3>Accounts</h3>
+                                <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-account')">+ Add</button>
+                            </div>
+                            <div class="accounts-grid" id="accounts-container" style="grid-template-columns:1fr; gap:12px; margin-bottom: 20px;">
+                                <!-- Dynamic account list -->
+                            </div>
+                            
+                            <div class="card" style="padding: 16px;">
+                                <h4>Quick Transfer</h4>
+                                <form id="form-transfer" onsubmit="handleTransfer(event)" style="margin-top:10px;">
+                                    <div class="form-group-v">
+                                        <select id="trans-from" required style="padding:6px; font-size:12px;"></select>
+                                    </div>
+                                    <div style="text-align:center; margin: 4px 0; color:var(--text-secondary);">&darr;</div>
+                                    <div class="form-group-v">
+                                        <select id="trans-to" required style="padding:6px; font-size:12px;"></select>
+                                    </div>
+                                    <div class="form-group-v">
+                                        <input type="number" id="trans-amount" step="0.01" min="0.01" required placeholder="Amount (₹)" style="padding:6px; font-size:12px;">
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-primary" style="width: 100%;">Transfer</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Main Transactions List -->
+                        <div class="ledger-main">
+                            <div class="screen-header-inline">
+                                <h3>Ledger Query & Filter</h3>
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn btn-secondary btn-sm" onclick="exportData('csv')">CSV Export</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="exportData('pdf')">PDF Report</button>
+                                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-transaction')">+ Log Entry <kbd style="font-size:9px; margin-left:5px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">N</kbd></button>
+                                </div>
+                            </div>
+                            
+                            <!-- Simple Search query panel -->
+                            <div class="card" style="padding: 12px 18px; margin-bottom: 15px;">
+                                <div class="horizontal-form" style="gap:10px;">
+                                    <div class="form-group" style="flex:2;">
+                                        <input type="text" id="filter-search" placeholder="Search (Amazon, Food, Cash, tags...)" oninput="handleSearchInstant()">
+                                    </div>
+                                    <div class="form-group" style="flex:1;">
+                                        <select id="filter-type" onchange="handleSearchInstant()">
+                                            <option value="">All Types</option>
+                                            <option value="income">Income</option>
+                                            <option value="expense">Expense</option>
+                                            <option value="transfer">Transfer</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="padding: 15px;">
+                                <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="ledger-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Type</th>
+                                                <th>Category</th>
+                                                <th>Account</th>
+                                                <th>Amount</th>
+                                                <th>Notes</th>
+                                                <th>Receipt</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ledger-transactions"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. SPLIT GROUPS SCREEN -->
+                <section id="screen-split" class="screen">
+                    <div class="split-layout">
+                        <!-- Groups Sidebar -->
+                        <div class="split-sidebar">
+                            <div class="split-sidebar-header">
+                                <h3>Split Groups</h3>
+                                <button class="btn btn-sm btn-primary" onclick="openModal('modal-add-group')">+ Add <kbd style="font-size:9px; margin-left:3px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">G</kbd></button>
+                            </div>
+                            <div class="groups-list" id="groups-list-container"></div>
+                        </div>
+                        <!-- Group Content Panel -->
+                        <div class="split-main" id="group-details-panel">
+                            <div class="empty-state">
+                                <div class="empty-icon">👥</div>
+                                <h3>No Split Group Selected</h3>
+                                <p>Select a group from the sidebar, or create a new permanent group for flatmates, trips, or team events.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. PLANNING TARGETS SCREEN (Budgets, savings, subs, bills) -->
+                <section id="screen-planning" class="screen">
+                    <div class="screen-header">
+                        <p>Set limits, save money, track bills & subscriptions.</p>
+                        <button class="btn btn-primary" onclick="openModal('modal-add-planning-item')">+ Set Planning Target <kbd style="font-size:9px; margin-left:5px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">P</kbd></button>
+                    </div>
+
+                    <div class="budgets-layout">
+                        <div class="budgets-column">
+                            <h3>Category Budgets Limit</h3>
+                            <div class="budgets-list-container" id="budgets-container" style="margin-top:15px;"></div>
+                        </div>
+                        <div class="savings-column">
+                            <h3>Savings Goals Target</h3>
+                            <div class="savings-list-container" id="savings-container" style="margin-top:15px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="budgets-layout" style="margin-top: 24px; border-top:1px solid var(--border-color); padding-top:24px;">
+                        <div class="budgets-column">
+                            <h3>Subscriptions Tracker</h3>
+                            <div class="subscriptions-list-container" id="subscriptions-container" style="margin-top:15px;"></div>
+                        </div>
+                        <div class="savings-column">
+                            <h3>Upcoming Bills Due</h3>
+                            <div class="bills-list-container" id="bills-container" style="margin-top:15px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. ASSETS & DEBTS (Balance Sheet) -->
+                <section id="screen-balance" class="screen">
+                    <div class="screen-header">
+                        <p>Assets (Investments) and Liabilities (Borrowed loans) calculation.</p>
+                        <button class="btn btn-primary" onclick="openModal('modal-add-balance-item')">+ Add Portfolio Item <kbd style="font-size:9px; margin-left:5px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">A</kbd></button>
+                    </div>
+                    
+                    <div class="budgets-layout">
+                        <div class="budgets-column">
+                            <h3>Investment Portfolio</h3>
+                            <div class="investments-table-card card" style="margin-top: 15px; padding:15px;">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Principal</th>
+                                            <th>Current</th>
+                                            <th>Returns</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="investments-list"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="savings-column">
+                            <h3>Debts & Loans Ledger</h3>
+                            <div class="debt-grid" id="debt-container" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ================== MODALS SECTION ================== -->
+    <div class="modal-backdrop" id="modal-backdrop" onclick="closeAllModals()"></div>
+
+    <!-- 1. Add Account Modal -->
+    <div class="modal" id="modal-add-account">
+        <div class="modal-header">
+            <h3>Add New Account</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-account')">&times;</span>
+        </div>
+        <form onsubmit="submitAddAccount(event)">
+            <div class="form-group-v">
+                <label>Account Name</label>
+                <input type="text" id="add-acc-name" required placeholder="SBI Savings, Cash Wallet...">
+            </div>
+            <div class="form-group-v">
+                <label>Account Type</label>
+                <select id="add-acc-type" required>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Wallet">Wallet</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Business Account">Business Account</option>
+                </select>
+            </div>
+            <div class="form-group-v">
+                <label>Starting Balance (₹)</label>
+                <input type="number" id="add-acc-balance" step="0.01" value="0.00" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Create Account</button>
+        </form>
+    </div>
+
+    <!-- 2. CONSOLIDATED Unified Transaction Modal (Transactions, Transfers, Recurring) -->
+    <div class="modal" id="modal-add-transaction">
+        <div class="modal-header">
+            <h3>Record Money Transaction</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-transaction')">&times;</span>
+        </div>
+        <form onsubmit="submitAddTransaction(event)" enctype="multipart/form-data">
+            <div class="form-group-v">
+                <label>Flow Type</label>
+                <select id="add-tx-type" required onchange="toggleConsolidatedTxFields()">
+                    <option value="expense" selected>Expense</option>
+                    <option value="income">Income</option>
+                    <option value="transfer">Account Transfer</option>
+                    <option value="recurring_expense">Recurring Expense</option>
+                    <option value="recurring_income">Recurring Income</option>
+                </select>
+            </div>
+            <div class="form-group-v">
+                <label>Amount (₹)</label>
+                <input type="number" id="add-tx-amount" step="0.01" min="0.01" required placeholder="0.00">
+            </div>
+            <div class="form-group-v">
+                <label id="label-tx-date">Date</label>
+                <input type="date" id="add-tx-date" required>
+            </div>
+            <div class="form-group-v" id="group-tx-category">
+                <label>Category</label>
+                <select id="add-tx-category"></select>
+            </div>
+            <div class="form-group-v" id="group-tx-account">
+                <label id="label-tx-account">Account</label>
+                <select id="add-tx-account"></select>
+            </div>
+            <div class="form-group-v" id="group-tx-to-account" style="display:none;">
+                <label>To Destination Account</label>
+                <select id="add-tx-to-account"></select>
+            </div>
+            <div class="form-group-v" id="group-tx-frequency" style="display:none;">
+                <label>Billing Occurrence Frequency</label>
+                <select id="add-tx-frequency">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly" selected>Monthly</option>
+                </select>
+            </div>
+            <div class="form-group-v" id="group-tx-notes">
+                <label>Description / Notes</label>
+                <input type="text" id="add-tx-notes" placeholder="Details...">
+            </div>
+            <div class="form-group-v" id="group-tx-tags">
+                <label>Tags (Comma separated)</label>
+                <input type="text" id="add-tx-tags" placeholder="groceries, tags...">
+            </div>
+            <div class="form-group-v" id="group-tx-receipt">
+                <label>Attach Receipt (Image or PDF)</label>
+                <input type="file" id="add-tx-receipt" name="receipt" accept="image/*,application/pdf">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Log Transaction</button>
+        </form>
+    </div>
+
+    <!-- 3. Add Split Group Modal -->
+    <div class="modal" id="modal-add-group">
+        <div class="modal-header">
+            <h3>Create Shared Split Group</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-group')">&times;</span>
+        </div>
+        <form onsubmit="submitAddGroup(event)">
+            <div class="form-group-v">
+                <label>Group Name</label>
+                <input type="text" id="add-gp-name" required placeholder="Roommates, Trips, Office...">
+            </div>
+            <div class="form-group-v">
+                <label>Description</label>
+                <input type="text" id="add-gp-desc" placeholder="Shared expenses...">
+            </div>
+            <div class="form-group-v">
+                <label>Members (One per line, include yourself: e.g. Myself)</label>
+                <textarea id="add-gp-members" rows="4" required placeholder="Myself&#10;John&#10;Alice"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Create Group</button>
+        </form>
+    </div>
+
+    <!-- 4. Group Expense Modal (Split wizard) -->
+    <div class="modal" id="modal-add-group-expense">
+        <div class="modal-header">
+            <h3>Add Group Expense</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-group-expense')">&times;</span>
+        </div>
+        <form id="form-group-expense" onsubmit="submitGroupExpense(event)">
+            <input type="hidden" id="gp-exp-group-id">
+            <div class="form-group-v">
+                <label>Description / Bill Title</label>
+                <input type="text" id="gp-exp-desc" required placeholder="Dinner, cab ride...">
+            </div>
+            <div class="form-group-v">
+                <label>Total Bill Amount (₹)</label>
+                <input type="number" id="gp-exp-amount" step="0.01" min="0.01" required placeholder="0.00" oninput="updateSplitWizardDetails()">
+            </div>
+            <div class="form-group-v">
+                <label>Paid By</label>
+                <select id="gp-exp-payer" required></select>
+            </div>
+            <div class="form-group-v">
+                <label>Link to Personal Account (Optional)</label>
+                <select id="gp-exp-personal-account">
+                    <option value="">-- Do Not Deduct From Ledger --</option>
+                </select>
+                <span class="muted-text" style="font-size:10px; margin-top:2px; color: var(--text-muted);">Select an account if you paid this bill and want the full amount logged as a personal expense.</span>
+            </div>
+            <div class="form-group-v">
+                <label>Date</label>
+                <input type="date" id="gp-exp-date" required>
+            </div>
+            <div class="form-group-v">
+                <label>Split Type Method</label>
+                <select id="gp-exp-type" required onchange="changeSplitWizardType()">
+                    <option value="equal">Equal Split</option>
+                    <option value="unequal">Unequal Split (Custom shares)</option>
+                    <option value="percentage">Percentage Split (%)</option>
+                    <option value="quantity">Quantity Split (Slices, count)</option>
+                    <option value="item">Item-Based Split (Itemized receipt)</option>
+                </select>
+            </div>
+            <div class="split-wizard-box" id="split-wizard-options"></div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Add Group Shared Expense</button>
+        </form>
+    </div>
+
+    <!-- 5. Group Payment Modal -->
+    <div class="modal" id="modal-add-group-payment">
+        <div class="modal-header">
+            <h3>Log Settlement Payment</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-group-payment')">&times;</span>
+        </div>
+        <form onsubmit="submitGroupPayment(event)">
+            <input type="hidden" id="gp-pay-group-id">
+            <div class="form-group-v">
+                <label>From Member (Payer)</label>
+                <select id="gp-pay-from" required></select>
+            </div>
+            <div class="form-group-v">
+                <label>To Member (Receiver)</label>
+                <select id="gp-pay-to" required></select>
+            </div>
+            <div class="form-group-v">
+                <label>Link to Personal Account (Optional)</label>
+                <select id="gp-pay-personal-account">
+                    <option value="">-- Do Not Link to Ledger --</option>
+                </select>
+                <span class="muted-text" style="font-size:10px; margin-top:2px; color: var(--text-muted);">Select action and account if you paid or received this money and want it logged.</span>
+            </div>
+            <div class="form-group-v">
+                <label>Amount (₹)</label>
+                <input type="number" id="gp-pay-amount" step="0.01" min="0.01" required placeholder="0.00">
+            </div>
+            <div class="form-group-v">
+                <label>Date</label>
+                <input type="date" id="gp-pay-date" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Record Cash Settlement</button>
+        </form>
+    </div>
+
+    <!-- 6. CONSOLIDATED Planning Target Modal (Budgets, Savings, Subs, Bills) -->
+    <div class="modal" id="modal-add-planning-item">
+        <div class="modal-header">
+            <h3>Create Planning Target</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-planning-item')">&times;</span>
+        </div>
+        <form onsubmit="submitAddPlanningItem(event)">
+            <div class="form-group-v">
+                <label>Target Type</label>
+                <select id="plan-type" required onchange="togglePlanningFields()">
+                    <option value="budget">Monthly Budget Limit</option>
+                    <option value="savings_goal">Savings Target Goal</option>
+                    <option value="subscription">Subscription Tracker</option>
+                    <option value="bill">Upcoming Bill Due Reminder</option>
+                </select>
+            </div>
+            
+            <!-- Shared name/category fields -->
+            <div class="form-group-v" id="group-plan-category">
+                <label>Expense Category</label>
+                <select id="plan-category">
+                    <option value="Food">Food</option>
+                    <option value="Fuel">Fuel</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Education">Education</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Travel">Travel</option>
+                </select>
+            </div>
+            <div class="form-group-v" id="group-plan-name" style="display:none;">
+                <label>Goal / Target Name</label>
+                <input type="text" id="plan-name" placeholder="Netflix, Electric Bill, New Laptop...">
+            </div>
+            
+            <div class="form-group-v">
+                <label id="label-plan-amount">Monthly Budget Amount (₹)</label>
+                <input type="number" id="plan-amount" step="0.01" min="0.01" required placeholder="0.00">
+            </div>
+
+            <!-- Savings specific -->
+            <div class="form-group-v" id="group-plan-saved" style="display:none;">
+                <label>Amount Already Saved (₹)</label>
+                <input type="number" id="plan-saved" step="0.01" value="0.00">
+            </div>
+
+            <!-- Sub & Bill & Goal dates -->
+            <div class="form-group-v" id="group-plan-date" style="display:none;">
+                <label id="label-plan-date">Target Date</label>
+                <input type="date" id="plan-date">
+            </div>
+
+            <!-- Sub specific billing cycle -->
+            <div class="form-group-v" id="group-plan-cycle" style="display:none;">
+                <label>Renewal Billing Period</label>
+                <select id="plan-cycle">
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+            </div>
+
+            <!-- Sub & Bill account source -->
+            <div class="form-group-v" id="group-plan-account" style="display:none;">
+                <label>Payment Source Account</label>
+                <select id="plan-account"></select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Set Planning Target</button>
+        </form>
+    </div>
+
+    <!-- 7. CONSOLIDATED Balance Sheet Modal (Debt / Investment) -->
+    <div class="modal" id="modal-add-balance-item">
+        <div class="modal-header">
+            <h3>Add Asset / Debt Item</h3>
+            <span class="close-modal" onclick="closeModal('modal-add-balance-item')">&times;</span>
+        </div>
+        <form onsubmit="submitAddBalanceItem(event)">
+            <div class="form-group-v">
+                <label>Asset / Liability Type</label>
+                <select id="bal-type" required onchange="toggleBalanceFields()">
+                    <option value="investment">Asset Investment Portfolio</option>
+                    <option value="borrowed">Borrowed Debt (Liability)</option>
+                    <option value="lent">Lent Loan (Asset)</option>
+                </select>
+            </div>
+            <div class="form-group-v">
+                <label id="label-bal-name">Asset Name</label>
+                <input type="text" id="bal-name" required placeholder="Vanguard ETF, Dave, Amex Loan...">
+            </div>
+            
+            <!-- Investment type -->
+            <div class="form-group-v" id="group-bal-invest-type">
+                <label>Asset Class Class</label>
+                <select id="bal-invest-type">
+                    <option value="Stocks">Stocks</option>
+                    <option value="FD">FD (Fixed Deposit)</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Crypto">Crypto</option>
+                    <option value="Mutual Funds">Mutual Funds</option>
+                </select>
+            </div>
+
+            <div class="form-group-v">
+                <label id="label-bal-principal">Principal Invested Amount (₹)</label>
+                <input type="number" id="bal-principal" step="0.01" min="0.01" required>
+            </div>
+
+            <!-- Investment specific -->
+            <div class="form-group-v" id="group-bal-current">
+                <label>Current Market Value (₹)</label>
+                <input type="number" id="bal-current" step="0.01" min="0.01" value="0.00">
+            </div>
+
+            <!-- Debt specific -->
+            <div class="form-group-v" id="group-bal-rate" style="display:none;">
+                <label>Annual Interest Rate (%)</label>
+                <input type="number" id="bal-rate" step="0.01" value="0.00">
+            </div>
+            <div class="form-group-v" id="group-bal-compound" style="display:none;">
+                <label>Interest Compounding Interval</label>
+                <select id="bal-compound">
+                    <option value="none" selected>No Interest (Friendly)</option>
+                    <option value="monthly">Monthly compounding</option>
+                    <option value="yearly">Yearly compounding</option>
+                </select>
+            </div>
+            <div class="form-group-v" id="group-bal-emi" style="display:none;">
+                <label>Target Repayment EMI (₹) (Optional)</label>
+                <input type="number" id="bal-emi" step="0.01" value="0.00">
+            </div>
+            <div class="form-group-v" id="group-bal-date" style="display:none;">
+                <label>Start Date</label>
+                <input type="date" id="bal-date">
+            </div>
+            <div class="form-group-v" id="group-bal-notes">
+                <label>Description Notes</label>
+                <input type="text" id="bal-notes" placeholder="Desk setup financing, mutual funds...">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Add Portfolio Item</button>
+        </form>
+    </div>
+
+    <!-- 8. Generic Quick Update Value Modal (Funds, Investment Value, Debt repayments, Bill payments) -->
+    <div class="modal" id="modal-update-value">
+        <div class="modal-header">
+            <h3 id="update-val-title">Update Target</h3>
+            <span class="close-modal" onclick="closeModal('modal-update-value')">&times;</span>
+        </div>
+        <form onsubmit="submitGenericUpdate(event)">
+            <input type="hidden" id="update-val-id">
+            <input type="hidden" id="update-val-mode">
+            <input type="hidden" id="update-val-extra">
+            <div class="form-group-v">
+                <label id="update-val-label">New Value (₹)</label>
+                <input type="number" id="update-val-input" step="0.01" required>
+            </div>
+            <div class="form-group-v" id="group-update-val-account" style="display:none;">
+                <label>Payment Source Account</label>
+                <select id="update-val-account"></select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Update Target Value</button>
+        </form>
+    </div>
+
+    <!-- 9. Keyboard Help Cheat Sheet Modal -->
+    <div class="modal" id="modal-keyboard-help">
+        <div class="modal-header">
+            <h3>Keyboard Shortcuts Cheat Sheet</h3>
+            <span class="close-modal" onclick="closeModal('modal-keyboard-help')">&times;</span>
+        </div>
+        <div style="padding: 15px; font-size:13px; line-height: 1.6;">
+            <p style="margin-bottom: 15px; font-weight: 500;">PennyBook is designed to be fully mouse-free. Use these combinations:</p>
+            <table class="ledger-table">
+                <thead>
+                    <tr><th>Action / Screen</th><th>Shortcut Combo</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Dashboard Overview</td><td><kbd>Alt + 1</kbd></td></tr>
+                    <tr><td>Ledger & Accounts</td><td><kbd>Alt + 2</kbd></td></tr>
+                    <tr><td>Split Groups</td><td><kbd>Alt + 3</kbd></td></tr>
+                    <tr><td>Planning Targets</td><td><kbd>Alt + 4</kbd></td></tr>
+                    <tr><td>Assets & Debts</td><td><kbd>Alt + 5</kbd></td></tr>
+                    <tr><td>Log Money Entry</td><td><kbd>Alt + N</kbd></td></tr>
+                    <tr><td>Add Planning Target</td><td><kbd>Alt + P</kbd></td></tr>
+                    <tr><td>Add Portfolio Item</td><td><kbd>Alt + A</kbd></td></tr>
+                    <tr><td>Create Split Group</td><td><kbd>Alt + G</kbd></td></tr>
+                    <tr><td>Open this Help sheet</td><td><kbd>Alt + H</kbd></td></tr>
+                    <tr><td>Close Modal / Helper</td><td><kbd>Escape</kbd></td></tr>
+                    <tr><td>Navigate fields / elements</td><td><kbd>Tab</kbd> / <kbd>Shift + Tab</kbd></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

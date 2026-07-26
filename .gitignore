@@ -1,0 +1,40 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller build directories
+build/
+dist/
+
+# Inno Setup compiler output folder
+Output/
+
+# SQLite databases (local user data)
+*.db
+pennybook.db
+pennybook.db-journal
+pennybook.db-wal
+pennybook.db-shm
+
+# User uploaded receipts
+receipts/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS-specific files
+Thumbs.db
+Desktop.ini
