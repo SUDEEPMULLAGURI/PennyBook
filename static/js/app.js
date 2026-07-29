@@ -64,8 +64,9 @@ function router() {
         dashboard: "Dashboard & Insights",
         ledger: "Transactions Ledger & Accounts",
         split: "Shared Split Groups",
-        planning: "Planning Targets (Budgets, Goals, Subs)",
-        balance: "Balance Sheet (Assets & Debts)"
+        planning: "Budget Planning",
+        balance: "Balance Sheet (Assets & Debts)",
+        fire: "FIRE Planner"
     };
     document.getElementById('current-section-title').textContent = screenTitles[tabName] || "PennyBook";
 
@@ -75,6 +76,7 @@ function router() {
     else if (tabName === 'split') loadSplitScreen();
     else if (tabName === 'planning') loadPlanningScreen();
     else if (tabName === 'balance') loadBalanceScreen();
+    else if (tabName === 'fire') loadGlobalStats();
 
     // Auto-focus key interaction input fields to support mouse-free usage
     setTimeout(() => {
@@ -98,6 +100,9 @@ function router() {
         } else if (tabName === 'balance') {
             const addBalBtn = document.querySelector('#screen-balance button');
             if (addBalBtn) addBalBtn.focus();
+        } else if (tabName === 'fire') {
+            const fireAge = document.getElementById('fxe-age');
+            if (fireAge) fireAge.focus();
         }
     }, 150);
 }
@@ -130,6 +135,94 @@ function loadGlobalStats() {
                 rateEl.className = "value orange-text";
             }
         });
+}
+
+// ----------------- MONTHLY BUDGET SIMULATOR -----------------
+function calculateMonthlyPlan() {
+    const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+    
+    const inflow = getVal('mbp-inc-monthly') + getVal('mbp-inc-add') + getVal('mbp-inc-rent') + getVal('mbp-inc-spouse');
+    
+    const essentials = getVal('mbp-exp-rent') + getVal('mbp-exp-tax') + getVal('mbp-exp-utils') + getVal('mbp-exp-groceries') + 
+                       getVal('mbp-exp-transport') + getVal('mbp-exp-medical') + getVal('mbp-exp-school') + getVal('mbp-exp-ins');
+                       
+    const lifestyle = getVal('mbp-life-maid') + getVal('mbp-life-shop') + getVal('mbp-life-travel') + getVal('mbp-life-dine');
+    
+    const emis = getVal('mbp-emi-home') + getVal('mbp-emi-car') + getVal('mbp-emi-personal') + getVal('mbp-emi-other');
+    
+    const investments = getVal('mbp-inv-mf') + getVal('mbp-inv-stocks') + getVal('mbp-inv-fd') + getVal('mbp-inv-other');
+    
+    const outflow = essentials + lifestyle + emis + investments;
+    const leftout = inflow - outflow;
+    
+    document.getElementById('mbp-total-inflow').textContent = formatCurrency(inflow);
+    document.getElementById('mbp-total-essentials').textContent = formatCurrency(essentials);
+    document.getElementById('mbp-total-lifestyle').textContent = formatCurrency(lifestyle);
+    document.getElementById('mbp-total-emis').textContent = formatCurrency(emis);
+    document.getElementById('mbp-total-investments').textContent = formatCurrency(investments);
+    document.getElementById('mbp-total-outflow').textContent = formatCurrency(outflow);
+    
+    const leftoutEl = document.getElementById('mbp-leftout');
+    leftoutEl.textContent = formatCurrency(leftout);
+    leftoutEl.className = "value " + (leftout >= 0 ? "green-text" : "orange-text");
+    
+    // Mistakes Finder Logic
+    const mistakes = [];
+    if (inflow > 0) {
+        if (emis / inflow > 0.40) mistakes.push(`Debt Danger: You are spending ${(emis/inflow*100).toFixed(0)}% of your income on EMIs. Try to keep this below 30-40%.`);
+        if (essentials / inflow > 0.60) mistakes.push(`High Fixed Costs: Essential expenses are taking up ${(essentials/inflow*100).toFixed(0)}% of your income. Standard target is 50%.`);
+        if (lifestyle / inflow > 0.30) mistakes.push(`Lifestyle Inflation: You are spending ${(lifestyle/inflow*100).toFixed(0)}% on non-essentials. Target 20-30% max.`);
+        if (investments / inflow < 0.10 && inflow > 50000) mistakes.push(`Low Savings: You are investing only ${(investments/inflow*100).toFixed(0)}% of your income. Aim for at least 20%.`);
+    }
+    
+    if (essentials > 0) {
+        mistakes.push(`💡 Emergency Fund Goal: You should have at least ${formatCurrency(essentials * 6)} (6 months of essentials) saved in a liquid bank account.`);
+    }
+    
+    const mistakesDiv = document.getElementById('mbp-mistakes');
+    const mistakesList = document.getElementById('mbp-mistakes-list');
+    
+    if (mistakes.length > 0) {
+        mistakesList.innerHTML = mistakes.map(m => `<li>${m}</li>`).join('');
+        mistakesDiv.style.display = 'block';
+    } else {
+        mistakesDiv.style.display = 'none';
+        mistakesList.innerHTML = '';
+    }
+}
+
+function loadMonthlyPlan() {
+    fetch('/api/budget_plan')
+        .then(res => res.json())
+        .then(data => {
+            const inputs = document.querySelectorAll('.mbp-input');
+            inputs.forEach(input => {
+                if (data[input.id] !== undefined) {
+                    input.value = data[input.id];
+                }
+                // Attach event listener for real-time calculation
+                input.removeEventListener('input', calculateMonthlyPlan);
+                input.addEventListener('input', calculateMonthlyPlan);
+            });
+            calculateMonthlyPlan();
+        });
+}
+
+function saveMonthlyPlan() {
+    const data = {};
+    document.querySelectorAll('.mbp-input').forEach(input => {
+        data[input.id] = parseFloat(input.value) || 0;
+    });
+    
+    fetch('/api/budget_plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(resData => {
+        alert("Monthly Budget Plan saved successfully!");
+    });
 }
 
 // ----------------- 1. DASHBOARD SCREEN -----------------
@@ -584,7 +677,7 @@ function renderGroupDetails(gp, balances, payments) {
             expenseRows += `
                 <tr>
                     <td>${formatDateShort(e.date)}</td>
-                    <td><strong>{e.description}</strong></td>
+                    <td><strong>${e.description}</strong></td>
                     <td>Paid by ${e.paid_by_member_name}</td>
                     <td class="magenta-text font-weight-bold">${formatCurrency(e.amount)}</td>
                     <td>
@@ -673,6 +766,7 @@ function renderGroupDetails(gp, balances, payments) {
 
 // ----------------- 4. PLANNING TARGETS SCREEN -----------------
 function loadPlanningScreen() {
+    loadMonthlyPlan();
     // Populate form accounts drop down lists
     fetch('/api/accounts')
         .then(res => res.json())
@@ -1737,6 +1831,65 @@ function runLoanCalc(e) {
     });
 }
 
+let fireChartInstance = null;
+
+function runFIREExcelCalc(e) {
+    if (e) e.preventDefault();
+    const data = {
+        current_age: document.getElementById('fxe-age').value,
+        current_income: document.getElementById('fxe-income').value,
+        salary_growth: document.getElementById('fxe-salary-growth').value,
+        current_expense: document.getElementById('fxe-expense').value,
+        current_corpus: document.getElementById('fxe-corpus').value,
+        target_age: document.getElementById('fxe-fire-age').value,
+        inflation: document.getElementById('fxe-inflation').value,
+        expected_return: document.getElementById('fxe-return').value
+    };
+    
+    fetch('/api/calc/fire_excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(resData => {
+        document.getElementById('fxe-res-years').textContent = resData.years_to_retire;
+        document.getElementById('fxe-res-ann-exp').textContent = formatCurrency(resData.expense_at_retirement);
+        document.getElementById('fxe-res-25x').textContent = formatCurrency(resData.fire_25x);
+        document.getElementById('fxe-res-30x').textContent = formatCurrency(resData.fire_30x);
+        
+        const faultBox = document.getElementById('fxe-fault-message');
+        if (resData.fault_age) {
+            faultBox.textContent = `⚠️ SHORTFALL: Your corpus runs out at age ${resData.fault_age}!`;
+            faultBox.style.color = '#ff4a4a'; // Red
+        } else {
+            faultBox.textContent = "✅ SUCCESS: Your corpus sustains you past age 100!";
+            faultBox.style.color = '#00ffcc'; // Cyan/Green
+        }
+        
+        document.getElementById('fire-excel-results').style.display = 'block';
+        
+        // Render Schedule Table
+        const tbody = document.getElementById('fxe-schedule-rows');
+        tbody.innerHTML = '';
+        resData.schedule.forEach(row => {
+            const tr = document.createElement('tr');
+            if (row.end_val <= 0) tr.style.opacity = '0.5';
+            if (row.age == data.target_age) tr.style.backgroundColor = 'rgba(0, 255, 204, 0.1)'; // Highlight retirement year
+            tr.innerHTML = `
+                <td>${row.age}</td>
+                <td>${formatCurrency(row.corpus)}</td>
+                <td class="green-text">${formatCurrency(row.income)}</td>
+                <td class="orange-text">${formatCurrency(row.expense)}</td>
+                <td class="cyan-text">${formatCurrency(row.investment)}</td>
+                <td>${formatCurrency(row.end_val)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('fire-excel-table-card').style.display = 'block';
+    });
+}
+
 // ----------------- EXPORT -----------------
 function exportData(format) {
     const search_text = document.getElementById('filter-search').value;
@@ -1939,5 +2092,169 @@ document.addEventListener('keydown', (e) => {
         if (handled) {
             e.preventDefault();
         }
+    }
+});
+
+// Attach real-time calculation to FIRE Planner inputs
+document.querySelectorAll('#form-fire-excel input').forEach(input => {
+    input.addEventListener('input', () => runFIREExcelCalc());
+});
+
+// Mobile Sync QR Generation
+let qrCodeInstance = null;
+async function showMobileSyncQR() {
+    let host = window.location.hostname;
+    try {
+        const res = await fetch('/api/system/ip');
+        const data = await res.json();
+        host = data.ip;
+    } catch (e) {
+        console.error("Failed to fetch local IP", e);
+    }
+    const url = window.location.protocol + '//' + host + ':' + window.location.port + '/m';
+    
+    // Display the IP link text for manual entry
+    const urlTextEl = document.getElementById('mobile-sync-url-text');
+    if(urlTextEl) urlTextEl.textContent = url;
+
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = ''; // clear previous
+    
+    qrCodeInstance = new QRCode(qrContainer, {
+        text: url,
+        width: 200,
+        height: 200,
+        colorDark: "#1e1335",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    openModal('modal-mobile-sync');
+}
+
+// Auto-refresh for Desktop app
+let lastKnownSyncTime = null;
+
+async function checkSyncStatus() {
+    try {
+        const res = await fetch('/api/system/sync_status');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (lastKnownSyncTime === null) {
+            lastKnownSyncTime = data.last_sync_time;
+            return;
+        }
+        
+        if (data.last_sync_time > lastKnownSyncTime) {
+            lastKnownSyncTime = data.last_sync_time;
+            refreshCurrentTab();
+        }
+    } catch (e) {
+        // silently ignore fetch errors if the app is disconnected
+    }
+}
+
+function refreshCurrentTab() {
+    // Always refresh global header stats
+    loadGlobalStats();
+    
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return;
+    
+    const activeId = activeScreen.id;
+    if (activeId === 'screen-dashboard') {
+        loadDashboard();
+    } else if (activeId === 'screen-ledger') {
+        loadLedgerScreen();
+    } else if (activeId === 'screen-split') {
+        loadSplitScreen();
+    } else if (activeId === 'screen-planning') {
+        loadPlanningScreen();
+    } else if (activeId === 'screen-balance') {
+        loadBalanceScreen();
+    }
+}
+
+// Check every 3 seconds
+setInterval(checkSyncStatus, 3000);
+
+// Initialize custom titlebar for desktop native mode
+function initTitlebar() {
+    document.documentElement.style.setProperty('--titlebar-height', '32px');
+    const tb = document.getElementById('custom-titlebar');
+    if (tb) tb.style.display = 'flex';
+}
+
+if (window.pywebview) {
+    initTitlebar();
+} else {
+    window.addEventListener('pywebviewready', initTitlebar);
+}
+
+// Gold Matrix Splash Screen Logic
+let matrixInterval;
+
+function initMatrix() {
+    const canvas = document.getElementById('matrix-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Financial symbols and currency characters
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$€£¥₹%&@📈📉';
+    const fontSize = 18;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = [];
+    
+    for (let x = 0; x < columns; x++) {
+        drops[x] = 1;
+    }
+    
+    function draw() {
+        // Semi-transparent dark slate to create trailing effect
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Professional Blue text
+        ctx.fillStyle = '#3b82f6';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.6)';
+        ctx.font = fontSize + 'px monospace';
+        
+        for (let i = 0; i < drops.length; i++) {
+            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            
+            // Randomly reset drops to the top
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+    
+    matrixInterval = setInterval(draw, 35);
+}
+
+window.addEventListener('load', () => {
+    // Only show once per session
+    if (!sessionStorage.getItem('splashShown')) {
+        initMatrix();
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.classList.add('splash-hidden');
+                setTimeout(() => {
+                    if (matrixInterval) clearInterval(matrixInterval);
+                    splash.remove();
+                }, 1000); // Wait for fade out
+            }
+            sessionStorage.setItem('splashShown', 'true');
+        }, 4500); 
+    } else {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.remove();
     }
 });

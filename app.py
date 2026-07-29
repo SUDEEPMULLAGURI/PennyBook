@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_file, Response
+from flask import Flask, request, jsonify, render_template, send_file, Response, send_from_directory, redirect
 import os
 import io
 import csv
@@ -15,6 +15,8 @@ import database
 import math_engine
 import settlement
 
+LAST_SYNC_TIME = 0
+
 import sys
 if getattr(sys, 'frozen', False):
     # The application is running in a PyInstaller bundle
@@ -23,7 +25,16 @@ if getattr(sys, 'frozen', False):
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 else:
     app = Flask(__name__, static_folder='static', template_folder='templates')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 RECEIPTS_DIR = os.path.abspath('receipts')
+
+@app.after_request
+def update_last_sync_time(response):
+    global LAST_SYNC_TIME
+    if request.method in ['POST', 'PUT', 'DELETE'] and request.path.startswith('/api/'):
+        if response.status_code in [200, 201]:
+            LAST_SYNC_TIME = time.time()
+    return response
 
 # Ensure receipts directory exists
 if not os.path.exists(RECEIPTS_DIR):
@@ -48,12 +59,51 @@ def start_recurring_scheduler_loop():
 # Start background thread
 threading.Thread(target=start_recurring_scheduler_loop, daemon=True).start()
 
+import socket
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+@app.route('/api/system/ip')
+def system_ip():
+    return jsonify({"ip": get_local_ip(), "port": 5000})
 
 # ----------------- STATIC VIEWS -----------------
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/mobile')
+def mobile_companion_redirect():
+    return redirect('/m')
+
+@app.route('/m')
+def mobile_companion():
+    return render_template('mobile.html')
+
+@app.route('/mobile-sw.js')
+def mobile_sw():
+    return send_from_directory('static/mobile', 'sw.js', mimetype='application/javascript')
+
+@app.route('/mobile-manifest.json')
+def mobile_manifest():
+    return send_from_directory('static/mobile', 'manifest.json', mimetype='application/json')
+
+@app.route('/api/mobile/metadata', methods=['GET'])
+def mobile_metadata():
+    accounts = database.get_accounts()
+    groups = database.get_groups()
+    for g in groups:
+        details = database.get_group_details(g['id'])
+        if details:
+            g['members'] = details.get('members', [])
+    return jsonify({"accounts": accounts, "groups": groups})
 
 # ----------------- ACCOUNTS APIs -----------------
 @app.route('/api/accounts', methods=['GET'])
@@ -235,6 +285,79 @@ def export_transactions():
         return Response(html, mimetype="text/html")
 
 
+@app.route('/api/sync/transactions', methods=['POST'])
+def sync_transactions():
+    data = request.json
+    transactions = data.get('transactions', [])
+    inserted_count = 0
+    
+    accounts = database.get_accounts()
+    
+    for tx in transactions:
+        # Match or default account ID
+        acc_id = None
+        action = None
+        
+        if tx.get('type') == 'payback':
+            acc_str = tx.get('account', 'NONE')
+            if acc_str != 'NONE' and '_' in acc_str:
+                action, acc_name = acc_str.split('_', 1)
+                if action == 'sent': action = 'expense'
+                elif action == 'received': action = 'income'
+                for a in accounts:
+                    if a['name'].lower() == acc_name.lower():
+                        acc_id = a['id']
+                        break
+        else:
+            for a in accounts:
+                if a['name'].lower() == tx.get('account', '').lower():
+                    acc_id = a['id']
+                    break
+            if not acc_id and accounts and tx.get('account') != 'NONE':
+                acc_id = accounts[0]['id']
+            
+        try:
+            if tx.get('type') == 'group_expense':
+                database.add_group_expense(
+                    group_id=int(tx.get('group_id')),
+                    description=tx.get('notes') or tx.get('category'),
+                    amount=float(tx.get('amount', 0)),
+                    paid_by_member_id=int(tx.get('paid_by_id')),
+                    date=tx.get('date'),
+                    split_type=tx.get('split_type', 'equal'),
+                    details_dict=tx.get('split_details', {}),
+                    personal_account_id=acc_id
+                )
+            elif tx.get('type') == 'payback':
+                database.add_group_payment(
+                    group_id=int(tx.get('group_id')),
+                    from_member_id=int(tx.get('from_member_id')),
+                    to_member_id=int(tx.get('to_member_id')),
+                    amount=float(tx.get('amount', 0)),
+                    date=tx.get('date'),
+                    personal_account_id=acc_id,
+                    personal_action=action
+                )
+            else:
+                database.add_transaction(
+                    date=tx.get('date'),
+                    t_type=tx.get('type', 'expense'),
+                    category=tx.get('category', 'Uncategorized'),
+                    amount=float(tx.get('amount', 0)),
+                    notes=tx.get('notes', ''),
+                    account_id=acc_id,
+                    to_account_id=None
+                )
+            inserted_count += 1
+        except Exception as e:
+            print(f"Error syncing transaction {tx}: {e}")
+            
+    return jsonify({"status": "success", "inserted": inserted_count})
+
+@app.route('/api/system/sync_status', methods=['GET'])
+def system_sync_status():
+    return jsonify({"last_sync_time": LAST_SYNC_TIME})
+
 # ----------------- RECEIPT UPLOADS VIEWER -----------------
 @app.route('/api/receipts/view')
 def get_receipt():
@@ -280,6 +403,18 @@ def update_savings(sg_id):
 @app.route('/api/savings/<int:sg_id>', methods=['DELETE'])
 def delete_savings(sg_id):
     database.delete_savings_goal(sg_id)
+    return jsonify({"status": "success"})
+
+
+# ----------------- MONTHLY BUDGET PLANNER APIs -----------------
+@app.route('/api/budget_plan', methods=['GET'])
+def get_budget_plan():
+    return jsonify(database.get_monthly_plan())
+
+@app.route('/api/budget_plan', methods=['POST'])
+def save_budget_plan():
+    data = request.json
+    database.save_monthly_plan(data)
     return jsonify({"status": "success"})
 
 
@@ -488,6 +623,21 @@ def get_group_settlements(g_id):
 
 
 # ----------------- CALCULATORS APIs -----------------
+@app.route('/api/calc/fire_excel', methods=['POST'])
+def calc_fire_excel():
+    data = request.json
+    result = math_engine.calculate_fire_excel_model(
+        int(data['current_age']),
+        float(data['current_income']),
+        float(data['salary_growth']),
+        float(data['current_expense']),
+        float(data['current_corpus']),
+        int(data['target_age']),
+        float(data['inflation']),
+        float(data['expected_return'])
+    )
+    return jsonify(result)
+
 @app.route('/api/calc/compound', methods=['POST'])
 def calc_compound():
     data = request.json
@@ -717,7 +867,25 @@ def run_flask_server():
     """
     Runs Flask server on localhost port 5000.
     """
-    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)
+    import socket
+    def get_local_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
+
+    local_ip = get_local_ip()
+    print("=" * 60)
+    print("PennyBook is running!")
+    print(f"Access on this PC: http://127.0.0.1:5000")
+    print(f"Access on your phone (via WiFi): http://{local_ip}:5000")
+    print("=" * 60)
+    
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
 
 if __name__ == '__main__':
     # Start Flask server in a daemon thread so it runs simultaneously
@@ -727,16 +895,32 @@ if __name__ == '__main__':
     # Let server boot up
     time.sleep(1.5)
     
+    class DesktopAPI:
+        def __init__(self):
+            self._window = None
+        def minimize(self):
+            if self._window: self._window.minimize()
+        def toggle_maximize(self):
+            if self._window: self._window.toggle_fullscreen()
+        def close(self):
+            if self._window: self._window.destroy()
+
     # Launch pywebview Native Window on the main thread
     try:
         print("Launching PennyBook Desktop Native Interface...")
-        webview.create_window(
+        api = DesktopAPI()
+        window = webview.create_window(
             title="PennyBook — Calculated Finance",
             url="http://127.0.0.1:5000",
             width=1280,
             height=800,
-            min_size=(1024, 768)
+            min_size=(1024, 768),
+            frameless=True,
+            easy_drag=False,
+            fullscreen=True,
+            js_api=api
         )
+        api._window = window
         
         # Suppress WinForms thread exception dialogs on close (specifically pywebview's BrowserProcessId NoneType error)
         try:

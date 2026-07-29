@@ -1,0 +1,23 @@
+{
+  "name": "PennyBook Mobile Companion",
+  "short_name": "PennyBook",
+  "description": "Offline transaction logger for PennyBook",
+  "start_url": "/m",
+  "display": "fullscreen",
+  "background_color": "#13141c",
+  "theme_color": "#8a2be2",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

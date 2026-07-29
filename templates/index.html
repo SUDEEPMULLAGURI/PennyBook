@@ -6,8 +6,25 @@
     <title>PennyBook — Simplified Finance</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/chart.min.js"></script>
-</head>
-<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <div class="custom-titlebar pywebview-drag-region" id="custom-titlebar">
+        <div class="titlebar-title">PennyBook</div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn" onclick="if(window.pywebview) window.pywebview.api.minimize()">—</button>
+            <button class="titlebar-btn" onclick="if(window.pywebview) window.pywebview.api.toggle_maximize()">🗖</button>
+            <button class="titlebar-btn close-btn" onclick="if(window.pywebview) window.pywebview.api.close()">✕</button>
+        </div>
+    </div>
+    
+    <!-- Gold Financial Matrix Splash Screen -->
+    <div id="splash-screen" class="matrix-splash">
+        <canvas id="matrix-canvas" class="matrix-canvas"></canvas>
+        <div class="matrix-content">
+            <h1 class="matrix-title">PENNYBOOK</h1>
+            <p class="matrix-subtitle">CALCULATED FINANCE</p>
+        </div>
+    </div>
+
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
@@ -15,7 +32,6 @@
                 <img src="/static/logo.png" alt="PennyBook Logo" style="width: 40px; height: 40px; border-radius: 8px; object-fit: contain;">
                 <div>
                     <h1 class="logo-text">PennyBook</h1>
-                    <p class="logo-tagline">Deterministic calculations</p>
                 </div>
             </div>
             <nav class="sidebar-nav">
@@ -33,11 +49,15 @@
                 </a>
                 <a href="#planning" class="nav-item" data-tab="planning">
                     <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M13 7h-2v6h6v-2h-4z"/></svg>
-                    Planning Targets <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">4</kbd>
+                    Budget Planning <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">4</kbd>
                 </a>
                 <a href="#balance" class="nav-item" data-tab="balance">
                     <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 7H4v2h16V7zm0 4H4v2h16v-2zm0-8H4v2h16V3z"/></svg>
                     Assets & Debts <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">5</kbd>
+                </a>
+                <a href="#fire" class="nav-item" data-tab="fire">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M11 2v4.072A8.006 8.006 0 0 0 4.072 13H2v2h2.072A8.006 8.006 0 0 0 11 21.928V24h2v-2.072A8.006 8.006 0 0 0 19.928 15h2v-2h-2.072A8.006 8.006 0 0 0 13 6.072V2h-2zm-1 6.072V10H6.072A6.007 6.007 0 0 1 10 8.072zm4 0A6.007 6.007 0 0 1 17.928 10H14V8.072zm0 7.856V14h3.928A6.007 6.007 0 0 1 14 15.928zm-4 0A6.007 6.007 0 0 1 6.072 14H10v1.928z"/></svg>
+                    FIRE Planner <kbd style="font-size:10px; margin-left:auto; opacity:0.6; padding:1px 4px; background:rgba(255,255,255,0.06); border-radius:3px;">6</kbd>
                 </a>
             </nav>
             <div class="sidebar-footer" style="flex-direction:column; align-items:flex-start; gap:4px; min-height: 60px;">
@@ -187,6 +207,43 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="card" style="margin-top: 24px;">
+                        <h3>FIRE Calculator</h3>
+                        <form id="calc-fire-form" onsubmit="runFIRECalc(event)" style="margin-top: 15px;">
+                            <div class="horizontal-form" style="gap:10px;">
+                                <div class="form-group">
+                                    <label>Annual Expenses (₹)</label>
+                                    <input type="number" id="fc-expenses" min="1" value="600000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Savings (₹)</label>
+                                    <input type="number" id="fc-savings" min="0" value="1000000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Annual Inv. (₹)</label>
+                                    <input type="number" id="fc-annual-inv" min="0" value="300000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>ROI (%)</label>
+                                    <input type="number" id="fc-roi" step="0.1" min="0" value="10" required>
+                                </div>
+                                <div class="form-group" style="flex:0; min-width:100px;">
+                                    <button type="submit" class="btn btn-primary" style="width:100%; height:41px;">FIRE!</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="calc-results-box" id="fire-results" style="display: none; flex-direction:row; justify-content:space-around; margin-top: 15px;">
+                            <div class="metric" style="flex-direction:column; align-items:center;">
+                                <span class="label">FIRE Target</span>
+                                <span class="value cyan-text" id="fc-res-target">₹0.00</span>
+                            </div>
+                            <div class="metric" style="flex-direction:column; align-items:center;">
+                                <span class="label">Years to FIRE</span>
+                                <span class="value green-text" id="fc-res-years">0.0</span>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="card" id="amortization-table-card" style="margin-top: 24px; display: none;">
                         <h3>Loan Amortization Schedule</h3>
@@ -245,6 +302,7 @@
                                 <div style="display:flex; gap:10px;">
                                     <button class="btn btn-secondary btn-sm" onclick="exportData('csv')">CSV Export</button>
                                     <button class="btn btn-secondary btn-sm" onclick="exportData('pdf')">PDF Report</button>
+                                    <button class="btn btn-primary btn-sm" style="background: linear-gradient(45deg, var(--neon-magenta), var(--primary));" onclick="showMobileSyncQR()">📱 Mobile Sync</button>
                                     <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-transaction')">+ Log Entry <kbd style="font-size:9px; margin-left:5px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">N</kbd></button>
                                 </div>
                             </div>
@@ -318,6 +376,75 @@
                         <button class="btn btn-primary" onclick="openModal('modal-add-planning-item')">+ Set Planning Target <kbd style="font-size:9px; margin-left:5px; padding:1px 3px; background:rgba(255,255,255,0.2); border-radius:2px;">P</kbd></button>
                     </div>
 
+                    <div class="card" style="margin-bottom: 24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Monthly Budget Simulator</h3>
+                            <button class="btn btn-primary" onclick="saveMonthlyPlan()">Save Plan</button>
+                        </div>
+                        <div class="horizontal-form" style="margin-top: 15px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; align-items: start;">
+                            <!-- Inflows -->
+                            <div>
+                                <h4 style="color:var(--primary); margin-bottom:10px;">In Flows</h4>
+                                <div class="form-group"><label>Monthly Income</label><input type="number" id="mbp-inc-monthly" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Additional Income</label><input type="number" id="mbp-inc-add" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Rental Income</label><input type="number" id="mbp-inc-rent" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Spouse's Income</label><input type="number" id="mbp-inc-spouse" class="mbp-input" value="0"></div>
+                                <div class="metric" style="margin-top:10px;"><span class="label">Total Inflow</span><span class="value green-text" id="mbp-total-inflow">₹0</span></div>
+                            </div>
+                            
+                            <!-- Essentials -->
+                            <div>
+                                <h4 style="color:var(--primary); margin-bottom:10px;">Essential Expenses</h4>
+                                <div class="form-group"><label>House Rent/Maint.</label><input type="number" id="mbp-exp-rent" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Property Tax</label><input type="number" id="mbp-exp-tax" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Utilities</label><input type="number" id="mbp-exp-utils" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Groceries</label><input type="number" id="mbp-exp-groceries" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Transportation</label><input type="number" id="mbp-exp-transport" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Medical</label><input type="number" id="mbp-exp-medical" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>School Fees</label><input type="number" id="mbp-exp-school" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Insurance</label><input type="number" id="mbp-exp-ins" class="mbp-input" value="0"></div>
+                                <div class="metric" style="margin-top:10px;"><span class="label">Total Essentials</span><span class="value orange-text" id="mbp-total-essentials">₹0</span></div>
+                            </div>
+                            
+                            <!-- Lifestyle & EMIs -->
+                            <div>
+                                <h4 style="color:var(--primary); margin-bottom:10px;">Lifestyle</h4>
+                                <div class="form-group"><label>Maid</label><input type="number" id="mbp-life-maid" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Shopping</label><input type="number" id="mbp-life-shop" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Travel</label><input type="number" id="mbp-life-travel" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Dine & Ent.</label><input type="number" id="mbp-life-dine" class="mbp-input" value="0"></div>
+                                <div class="metric" style="margin-top:10px;"><span class="label">Total Lifestyle</span><span class="value orange-text" id="mbp-total-lifestyle">₹0</span></div>
+                                
+                                <h4 style="color:var(--primary); margin-bottom:10px; margin-top:15px;">EMIs</h4>
+                                <div class="form-group"><label>Home Loan</label><input type="number" id="mbp-emi-home" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Car Loan</label><input type="number" id="mbp-emi-car" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Personal Loan</label><input type="number" id="mbp-emi-personal" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Other EMIs</label><input type="number" id="mbp-emi-other" class="mbp-input" value="0"></div>
+                                <div class="metric" style="margin-top:10px;"><span class="label">Total EMIs</span><span class="value magenta-text" id="mbp-total-emis">₹0</span></div>
+                            </div>
+                            
+                            <!-- Investments & Summary -->
+                            <div>
+                                <h4 style="color:var(--primary); margin-bottom:10px;">Investments</h4>
+                                <div class="form-group"><label>Mutual Funds</label><input type="number" id="mbp-inv-mf" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Stocks</label><input type="number" id="mbp-inv-stocks" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Fixed Deposits</label><input type="number" id="mbp-inv-fd" class="mbp-input" value="0"></div>
+                                <div class="form-group"><label>Others</label><input type="number" id="mbp-inv-other" class="mbp-input" value="0"></div>
+                                <div class="metric" style="margin-top:10px;"><span class="label">Total Investments</span><span class="value cyan-text" id="mbp-total-investments">₹0</span></div>
+                                
+                                <hr style="margin:20px 0; border:1px solid rgba(255,255,255,0.1);">
+                                
+                                <div class="metric" style="margin-bottom:10px;"><span class="label">Total Out Flows</span><span class="value orange-text" id="mbp-total-outflow">₹0</span></div>
+                                <div class="metric"><span class="label" style="font-size:16px;">Leftout for the Month</span><span class="value" id="mbp-leftout" style="font-size:24px;">₹0</span></div>
+                            </div>
+                        </div>
+
+                        <div id="mbp-mistakes" style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--neon-magenta); border-radius: 8px; display: none;">
+                            <h4 style="color: var(--neon-magenta);">⚠️ Budget Warnings (Mistakes Finder)</h4>
+                            <ul id="mbp-mistakes-list" style="margin-top: 10px; margin-left: 20px; color: var(--text-primary); line-height: 1.6;"></ul>
+                        </div>
+                    </div>
+
                     <div class="budgets-layout">
                         <div class="budgets-column">
                             <h3>Category Budgets Limit</h3>
@@ -369,6 +496,103 @@
                         <div class="savings-column">
                             <h3>Debts & Loans Ledger</h3>
                             <div class="debt-grid" id="debt-container" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- NEW FIRE PLANNER SCREEN -->
+                <section id="screen-fire" class="screen">
+                    <div class="screen-header">
+                        <p>FIRE Calculator (Financial Independence, Retire Early) based on your Excel model.</p>
+                    </div>
+                    
+                    <div>
+                        <div class="card" style="margin-bottom: 24px;">
+                            <h3>FIRE Inputs</h3>
+                            <form id="form-fire-excel" onsubmit="runFIREExcelCalc(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>Current Age</label>
+                                    <input type="number" id="fxe-age" min="1" value="30" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Annual Income (₹)</label>
+                                    <input type="number" id="fxe-income" min="0" value="1200000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Expected Salary Growth (%)</label>
+                                    <input type="number" id="fxe-salary-growth" step="0.1" value="5" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Annual Expense (₹)</label>
+                                    <input type="number" id="fxe-expense" min="0" value="600000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Investment / Corpus (₹)</label>
+                                    <input type="number" id="fxe-corpus" min="0" value="1000000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Target FIRE Age</label>
+                                    <input type="number" id="fxe-fire-age" min="1" value="50" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Inflation / Expense Increase (%)</label>
+                                    <input type="number" id="fxe-inflation" step="0.1" value="6" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Expected Return (%)</label>
+                                    <input type="number" id="fxe-return" step="0.1" value="12" required>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <button type="submit" class="btn btn-primary" style="width:100%; padding: 12px; font-size: 16px;">Calculate FIRE Plan</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:20px;">
+                            <div class="card" id="fire-excel-results" style="display: none;">
+                                <h3>FIRE Targets</h3>
+                                <div style="display:flex; justify-content:space-between; margin-top:15px; text-align:center;">
+                                    <div>
+                                        <span class="label" style="display:block; font-size:12px; color:var(--text-muted);">Years to Retire</span>
+                                        <span class="value orange-text" id="fxe-res-years" style="font-size:20px;">0</span>
+                                    </div>
+                                    <div>
+                                        <span class="label" style="display:block; font-size:12px; color:var(--text-muted);">Annual Expense @ Retirement</span>
+                                        <span class="value cyan-text" id="fxe-res-ann-exp" style="font-size:20px;">₹0</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; margin-top:15px; text-align:center;">
+                                    <div>
+                                        <span class="label" style="display:block; font-size:12px; color:var(--text-muted);">FIRE Number (25x / 4%)</span>
+                                        <span class="value green-text" id="fxe-res-25x" style="font-size:20px;">₹0</span>
+                                    </div>
+                                    <div>
+                                        <span class="label" style="display:block; font-size:12px; color:var(--text-muted);">FIRE Number (30x / 3.3%)</span>
+                                        <span class="value magenta-text" id="fxe-res-30x" style="font-size:20px;">₹0</span>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 20px; font-weight: bold; text-align:center;" id="fxe-fault-message">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" id="fire-excel-table-card" style="margin-top: 24px; display: none;">
+                        <h3>Year-by-Year Schedule</h3>
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Age</th>
+                                        <th>Starting Corpus</th>
+                                        <th>Annual Income</th>
+                                        <th>Annual Expense</th>
+                                        <th>Annual Investment</th>
+                                        <th>End Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fxe-schedule-rows"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
@@ -740,6 +964,20 @@
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 15px;">Update Target Value</button>
         </form>
+    </div>
+
+    <!-- Mobile Sync QR Modal -->
+    <div class="modal" id="modal-mobile-sync">
+        <div class="modal-content" style="text-align: center; max-width: 350px;">
+            <h3>Get Mobile App</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+                Scan this QR code with your phone's camera, or manually type the IP address below into your phone's browser to install the mobile companion app.
+            </p>
+            <div id="qrcode" style="display: flex; justify-content: center; padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px;"></div>
+            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 15px;" id="mobile-sync-url-text">Loading...</div>
+            <p style="font-size: 11px; color: var(--neon-cyan);">Make sure both devices are on the same Wi-Fi.</p>
+            <button class="btn btn-secondary" onclick="closeModal('modal-mobile-sync')" style="width: 100%; margin-top:10px;">Close</button>
+        </div>
     </div>
 
     <!-- 9. Keyboard Help Cheat Sheet Modal -->

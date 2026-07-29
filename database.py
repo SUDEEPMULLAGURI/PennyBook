@@ -188,9 +188,16 @@ def init_db():
     )
     ''')
     
+    # 14. Monthly Budget Plan (Simulator)
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS monthly_plan_items (
+        item_key TEXT PRIMARY KEY,
+        item_value REAL NOT NULL
+    )
+    ''')
+    
     conn.commit()
     conn.close()
-
 def recalculate_account_balances_connection(conn):
     """
     Recalculates account balances using connection `conn`.
@@ -853,3 +860,27 @@ def calculate_group_balances(group_id):
         balances[m] = round(balances[m], 2)
         
     return balances
+
+# ----------------- MONTHLY BUDGET PLAN (SIMULATOR) -----------------
+def get_monthly_plan():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_key, item_value FROM monthly_plan_items")
+    rows = cursor.fetchall()
+    conn.close()
+    return {row["item_key"]: row["item_value"] for row in rows}
+
+def save_monthly_plan(plan_dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # We can just insert or replace
+    for k, v in plan_dict.items():
+        cursor.execute("""
+            INSERT INTO monthly_plan_items (item_key, item_value) 
+            VALUES (?, ?) 
+            ON CONFLICT(item_key) DO UPDATE SET item_value=excluded.item_value
+        """, (k, float(v or 0.0)))
+        
+    conn.commit()
+    conn.close()

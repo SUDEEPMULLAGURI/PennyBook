@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PennyBook</title>
+    <link rel="manifest" href="/mobile-manifest.json?v=6">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-variant: #2c2c2e;
+            --primary: #0a84ff;
+            --on-primary: #ffffff;
+            --text: #ffffff;
+            --text-sec: #ebebf599;
+            --danger: #ff453a;
+            --success: #32d74b;
+        }
+        
+        * { box-sizing: border-box; font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 90px; }
+        
+        /* Header */
+        header {
+            padding: calc(env(safe-area-inset-top) + 20px) 20px 20px;
+            background: var(--surface);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 { margin: 0; font-size: 22px; font-weight: 700; background: linear-gradient(90deg, var(--primary), var(--success)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Install Banner */
+        #install-banner {
+            display: none;
+            background: var(--primary);
+            color: var(--on-primary);
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Container */
+        .container { padding: 20px; }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 24px; }
+        .label-float {
+            position: relative;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .label-float label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .label-float input, .label-float select {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 17px;
+            outline: none;
+            padding: 4px 0;
+            appearance: none;
+        }
+        
+        /* Specific huge amount input */
+        .amount-input-wrapper { text-align: center; margin: 30px 0; }
+        .amount-input-wrapper input {
+            background: transparent; border: none; outline: none;
+            color: var(--text); font-size: 48px; font-weight: 700; width: 100%; text-align: center;
+        }
+        .amount-input-wrapper input::placeholder { color: var(--surface-variant); }
+
+        /* Toggles */
+        .segment-control {
+            display: flex; background: var(--surface); border-radius: 12px; padding: 4px; margin-bottom: 20px;
+        }
+        .segment {
+            flex: 1; text-align: center; padding: 10px; font-size: 14px; font-weight: 600;
+            border-radius: 8px; color: var(--text-sec); transition: 0.2s;
+        }
+        .segment.active { background: var(--surface-variant); color: var(--text); }
+        
+        .switch-wrapper {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); padding: 16px; border-radius: 16px; margin-bottom: 20px;
+        }
+        
+        /* Group Splits */
+        #group-wrapper { display: none; }
+        .split-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .split-item input {
+            background: var(--surface-variant); border: none; color: white;
+            padding: 8px 12px; border-radius: 8px; width: 80px; text-align: right;
+        }
+
+        /* Floating Action */
+        .fab-container {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(18, 18, 18, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px calc(env(safe-area-inset-bottom) + 16px);
+            display: flex; gap: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .btn {
+            flex: 1; padding: 16px; border-radius: 16px; border: none; font-size: 16px; font-weight: 600; cursor: pointer;
+        }
+        .btn-primary { background: var(--primary); color: var(--on-primary); }
+        .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
+        
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translate(-50%, -100px);
+            background: var(--success); color: #000; padding: 12px 24px; border-radius: 30px; font-weight: 600;
+            transition: 0.3s; z-index: 2000;
+        }
+        .toast.show { transform: translate(-50%, 0); }
+    </style>
+</head>
+<body>
+
+    <div id="fs-overlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:rgba(18,18,18,0.9); backdrop-filter:blur(5px); display:flex; justify-content:center; align-items:center; color:var(--primary); font-size:18px; font-weight:600; cursor:pointer;">
+        👆 Tap anywhere to launch App
+    </div>
+
+    <div id="install-banner">📱 Tap here to install full App</div>
+
+    <header>
+        <h1>PennyBook</h1>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 12px; color: var(--text-sec);" id="status-indicator">Offline</div>
+            <button id="btn-fs" style="background:var(--surface-variant); border:1px solid rgba(255,255,255,0.1); color:var(--text); border-radius:8px; padding:6px 10px; font-size:11px; font-weight:600; cursor:pointer;">⛶ FULLSCREEN</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="amount-input-wrapper">
+            <div style="font-size: 14px; color: var(--text-sec); margin-bottom: 8px;">Amount (₹)</div>
+            <input type="number" id="m-amount" step="0.01" placeholder="0.00">
+        </div>
+
+        <div class="segment-control" id="type-segment">
+            <div class="segment active" data-val="expense">Expense</div>
+            <div class="segment" data-val="income">Income</div>
+            <div class="segment" data-val="payback">Payback</div>
+        </div>
+
+        <div class="form-group label-float">
+            <label>Date</label>
+            <input type="date" id="m-date">
+        </div>
+
+        <div class="form-group label-float">
+            <label>Account</label>
+            <select id="m-account">
+                <option value="">Fetching...</option>
+            </select>
+        </div>
+
+        <div class="form-group label-float" id="wrap-category">
+            <label>Category</label>
+            <input type="text" id="m-category" placeholder="e.g. Dining, Transit">
+        </div>
+
+        <div class="switch-wrapper" id="wrap-split-toggle">
+            <div style="font-weight: 500;">Split Expense</div>
+            <input type="checkbox" id="m-is-group" style="width: 20px; height: 20px; accent-color: var(--primary);">
+        </div>
+
+        <div id="group-wrapper">
+            <div class="form-group label-float">
+                <label>Select Group</label>
+                <select id="m-group"><option>Loading...</option></select>
+            </div>
+            
+            <div class="form-group label-float" id="wrap-pb-from" style="display:none;">
+                <label>From (Payer)</label>
+                <select id="m-pb-from"></select>
+            </div>
+            
+            <div class="form-group label-float" id="wrap-pb-to" style="display:none;">
+                <label>To (Receiver)</label>
+                <select id="m-pb-to"></select>
+            </div>
+
+            <div class="form-group label-float" id="wrap-paid-by">
+                <label>Paid By</label>
+                <select id="m-paid-by"></select>
+            </div>
+
+            <div class="form-group label-float" id="wrap-split-type">
+                <label>Split Strategy</label>
+                <select id="m-split-type">
+                    <option value="equal">Split Equally</option>
+                    <option value="exact">Exact Amounts</option>
+                    <option value="percentage">Percentages</option>
+                </select>
+            </div>
+            
+            <div id="split-inputs" style="margin-bottom: 24px; padding: 0 10px;"></div>
+        </div>
+
+        <div class="form-group label-float" style="margin-bottom: 60px;">
+            <label>Notes</label>
+            <input type="text" id="m-notes" placeholder="Optional details">
+        </div>
+
+    </div>
+
+    <div class="fab-container">
+        <button class="btn btn-secondary" onclick="startSync()">Sync (<span id="sync-count">0</span>)</button>
+        <button class="btn btn-primary" id="btn-save">Save Transaction</button>
+    </div>
+
+    <div id="toast" class="toast">Saved!</div>
+
+    <script>
+        // PWA Install
+        let deferredPrompt;
+        const banner = document.getElementById('install-banner');
+        
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || window.matchMedia('(display-mode: fullscreen)').matches) {
+            banner.style.display = 'none';
+        } else {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                banner.style.display = 'block';
+            });
+            banner.addEventListener('click', async () => {
+                if(deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if(outcome === 'accepted') banner.style.display = 'none';
+                    deferredPrompt = null;
+                }
+            });
+        }
+
+        // Basic State
+        document.getElementById('m-date').valueAsDate = new Date();
+        let currentType = 'expense';
+        
+        document.querySelectorAll('.segment').forEach(seg => {
+            seg.addEventListener('click', () => {
+                document.querySelectorAll('.segment').forEach(s => s.classList.remove('active'));
+                seg.classList.add('active');
+                currentType = seg.dataset.val;
+                
+                if (currentType === 'payback') {
+                    document.getElementById('wrap-category').style.display = 'none';
+                    document.getElementById('wrap-split-toggle').style.display = 'none';
+                    document.getElementById('group-wrapper').style.display = 'block';
+                    document.getElementById('m-is-group').checked = false; // reset split toggle
+                    
+                    document.getElementById('wrap-pb-from').style.display = 'block';
+                    document.getElementById('wrap-pb-to').style.display = 'block';
+                    document.getElementById('wrap-paid-by').style.display = 'none';
+                    document.getElementById('wrap-split-type').style.display = 'none';
+                    document.getElementById('split-inputs').style.display = 'none';
+                } else {
+                    document.getElementById('wrap-category').style.display = 'block';
+                    document.getElementById('wrap-split-toggle').style.display = 'flex';
+                    document.getElementById('group-wrapper').style.display = document.getElementById('m-is-group').checked ? 'block' : 'none';
+                    
+                    document.getElementById('wrap-pb-from').style.display = 'none';
+                    document.getElementById('wrap-pb-to').style.display = 'none';
+                    document.getElementById('wrap-paid-by').style.display = 'block';
+                    document.getElementById('wrap-split-type').style.display = 'block';
+                    document.getElementById('split-inputs').style.display = 'block';
+                }
+                
+                updateAccountDropdown();
+            });
+        });
+
+        // IndexedDB Setup for Persistent Storage
+        const DB_NAME = 'PennyBookDB';
+        const STORE_NAME = 'transactions';
+        const dbPromise = new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e.target.error);
+        });
+
+        async function getTxs() {
+            const db = await dbPromise;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function saveTx(txObj) {
+            const db = await dbPromise;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.add(txObj);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function clearTxs() {
+            const db = await dbPromise;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function updateCount() {
+            const txs = await getTxs();
+            document.getElementById('sync-count').textContent = txs.length;
+        }
+
+        // Request Persistent Storage to prevent automatic eviction
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then(granted => {
+                if (granted) console.log("Persistent storage granted.");
+            });
+        }
+        
+        updateCount();
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        let cachedGroups = [];
+        async function fetchMetadata() {
+            populateDropdowns();
+            try {
+                const res = await fetch('/api/mobile/metadata');
+                if(res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('pb_accounts', JSON.stringify(data.accounts));
+                    localStorage.setItem('pb_groups', JSON.stringify(data.groups));
+                    document.getElementById('status-indicator').textContent = 'Online • Ready';
+                    document.getElementById('status-indicator').style.color = 'var(--success)';
+                    populateDropdowns();
+                }
+            } catch(e) {
+                console.log('Using offline cache');
+                document.getElementById('status-indicator').textContent = 'Offline Mode';
+            }
+        }
+
+        function populateDropdowns() {
+            cachedGroups = JSON.parse(localStorage.getItem('pb_groups') || '[]');
+            
+            const grpEl = document.getElementById('m-group');
+            grpEl.innerHTML = cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('') || '<option value="">(No groups)</option>';
+            
+            updateAccountDropdown();
+            if(cachedGroups.length > 0) updateGroupMembers();
+        }
+
+        function updateAccountDropdown() {
+            const accs = JSON.parse(localStorage.getItem('pb_accounts') || '[]');
+            const accSelect = document.getElementById('m-account');
+            accSelect.innerHTML = '';
+            
+            if (currentType === 'payback') {
+                accSelect.innerHTML = '<option value="NONE">None (Just record group payment)</option>';
+                accs.forEach(a => {
+                    accSelect.innerHTML += `<option value="sent_${a.name}">Sent from ${a.name} (Expense)</option>`;
+                    accSelect.innerHTML += `<option value="received_${a.name}">Received to ${a.name} (Income)</option>`;
+                });
+            } else {
+                if (document.getElementById('m-is-group').checked) {
+                    accSelect.innerHTML = '<option value="NONE">None (Someone else paid)</option>';
+                }
+                accs.forEach(a => {
+                    accSelect.innerHTML += `<option value="${a.name}">${a.name}</option>`;
+                });
+            }
+        }
+
+        document.getElementById('m-is-group').addEventListener('change', e => {
+            document.getElementById('group-wrapper').style.display = e.target.checked ? 'block' : 'none';
+            updateAccountDropdown();
+        });
+
+        document.getElementById('m-group').addEventListener('change', updateGroupMembers);
+        
+        function updateGroupMembers() {
+            const gId = parseInt(document.getElementById('m-group').value);
+            const grp = cachedGroups.find(g => g.id === gId);
+            
+            const pb = document.getElementById('m-paid-by');
+            const pFrom = document.getElementById('m-pb-from');
+            const pTo = document.getElementById('m-pb-to');
+            
+            if(grp && grp.members) {
+                const opts = grp.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+                pb.innerHTML = opts;
+                pFrom.innerHTML = opts;
+                pTo.innerHTML = opts;
+                if(grp.members.length > 1) pTo.selectedIndex = 1;
+                renderSplits();
+            } else {
+                pb.innerHTML = '<option value="">(No members)</option>';
+                pFrom.innerHTML = ''; pTo.innerHTML = '';
+                document.getElementById('split-inputs').innerHTML = '';
+            }
+        }
+
+        document.getElementById('m-split-type').addEventListener('change', renderSplits);
+
+        function renderSplits() {
+            const type = document.getElementById('m-split-type').value;
+            const wrap = document.getElementById('split-inputs');
+            const gId = parseInt(document.getElementById('m-group').value);
+            const grp = cachedGroups.find(g => g.id === gId);
+            
+            if(!grp || !grp.members) {
+                wrap.innerHTML = ''; return;
+            }
+
+            if(type === 'equal') {
+                wrap.innerHTML = '<div style="font-size:12px; color:var(--text-sec); margin-bottom:10px;">Select who is included in the split:</div>' + grp.members.map(m => `
+                    <div class="split-item">
+                        <span>${m.name}</span>
+                        <input type="checkbox" class="split-check" data-id="${m.id}" data-name="${m.name}" checked style="width:20px; height:20px; accent-color:var(--primary);">
+                    </div>
+                `).join('');
+            } else {
+                wrap.innerHTML = grp.members.map(m => `
+                    <div class="split-item">
+                        <span>${m.name}</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="number" step="0.01" class="split-val" data-id="${m.name}" placeholder="0">
+                            <span style="color:var(--text-sec); font-size:12px;">${type === 'percentage' ? '%' : '₹'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        document.getElementById('btn-save').addEventListener('click', async () => {
+            const amt = document.getElementById('m-amount').value;
+            if(!amt || amt <= 0) return alert('Enter a valid amount!');
+            
+            const isGrp = document.getElementById('m-is-group').checked;
+            
+            let tx = {
+                date: document.getElementById('m-date').value,
+                type: currentType === 'payback' ? 'payback' : (isGrp ? 'group_expense' : currentType),
+                amount: amt,
+                category: document.getElementById('m-category').value || 'Uncategorized',
+                account: document.getElementById('m-account').value,
+                notes: document.getElementById('m-notes').value
+            };
+
+            if (currentType === 'payback') {
+                tx.group_id = document.getElementById('m-group').value;
+                tx.from_member_id = document.getElementById('m-pb-from').value;
+                tx.to_member_id = document.getElementById('m-pb-to').value;
+                if (tx.from_member_id === tx.to_member_id) return alert("Payer and Receiver must be different members.");
+            } else if (isGrp) {
+                tx.group_id = document.getElementById('m-group').value;
+                tx.paid_by_id = document.getElementById('m-paid-by').value;
+                tx.split_type = document.getElementById('m-split-type').value;
+                
+                let sDet = {};
+                if (tx.split_type === 'equal') {
+                    let parts = [];
+                    document.querySelectorAll('.split-check:checked').forEach(c => parts.push(c.getAttribute('data-name')));
+                    sDet.participants = parts;
+                } else {
+                    document.querySelectorAll('.split-val').forEach(inp => {
+                        sDet[inp.getAttribute('data-id')] = parseFloat(inp.value) || 0;
+                    });
+                }
+                tx.split_details = sDet;
+            }
+
+            await saveTx(tx);
+            
+            document.getElementById('m-amount').value = '';
+            document.getElementById('m-category').value = '';
+            document.getElementById('m-notes').value = '';
+            document.getElementById('m-is-group').checked = false;
+            document.getElementById('group-wrapper').style.display = 'none';
+            updateAccountDropdown();
+            
+            await updateCount();
+            
+            if (navigator.onLine) {
+                startSync(true);
+            } else {
+                showToast('Saved Offline!');
+            }
+        });
+
+        async function startSync(silent = false) {
+            const txs = await getTxs();
+            if(txs.length === 0) {
+                if(!silent) alert('Nothing to sync!');
+                return;
+            }
+            
+            if(!silent) document.getElementById('btn-save').textContent = 'Syncing...';
+            try {
+                // Remove internal IndexedDB 'id' field before sending
+                const payload = txs.map(t => {
+                    const { id, ...rest } = t;
+                    return rest;
+                });
+                
+                const res = await fetch('/api/sync/transactions', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ transactions: payload })
+                });
+                if(res.ok) {
+                    await clearTxs();
+                    await updateCount();
+                    showToast('Sync Successful!');
+                    fetchMetadata(); // refresh cache
+                } else {
+                    if(!silent) alert('Sync failed server-side.');
+                }
+            } catch(e) {
+                if(!silent) alert('Connection Error. Ensure PC is on and PennyBook is running.');
+            }
+            if(!silent) document.getElementById('btn-save').textContent = 'Save Transaction';
+        }
+
+        window.addEventListener('online', async () => {
+            const txs = await getTxs();
+            if (txs.length > 0) {
+                startSync(true);
+            }
+            fetchMetadata();
+        });
+
+        // Overlay Auto-Fullscreen
+        document.getElementById('fs-overlay').addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(()=>{});
+            }
+            this.style.display = 'none';
+            document.getElementById('btn-fs').style.display = 'none';
+        });
+
+        const fsBtn = document.getElementById('btn-fs');
+        fsBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(()=>{});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/mobile-sw.js');
+        
+        fetchMetadata();
+    </script>
+</body>
+</html>

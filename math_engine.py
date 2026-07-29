@@ -40,6 +40,74 @@ def calculate_net_worth(assets, liabilities):
     """
     return round(assets - liabilities, 2)
 
+def calculate_fire_excel_model(current_age, income, salary_growth_pct, expense, corpus, target_age, inflation_pct, expected_return_pct):
+    years_to_retire = target_age - current_age
+    if years_to_retire < 0:
+        years_to_retire = 0
+        
+    salary_growth = float(salary_growth_pct) / 100.0
+    inflation = float(inflation_pct) / 100.0
+    expected_return = float(expected_return_pct) / 100.0
+    
+    # Calculate Expense at Retirement
+    expense_at_retirement = expense * ((1 + inflation) ** years_to_retire)
+    
+    fire_25x = expense_at_retirement * 25
+    fire_30x = expense_at_retirement * (100 / 3.3333333333)
+    
+    schedule = []
+    curr_age = current_age
+    curr_corpus = float(corpus)
+    curr_income = float(income)
+    curr_expense = float(expense)
+    
+    # Run the projection until target age + 30 years or max age 100
+    max_age = max(target_age + 30, 100)
+    
+    fault_age = None
+    
+    while curr_age <= max_age:
+        if curr_age < target_age:
+            ann_inv = curr_income - curr_expense
+            if ann_inv < 0:
+                ann_inv = 0 # Cannot invest negative
+        else:
+            # Post retirement: Income is 0, investment is negative (withdrawal)
+            curr_income = 0.0
+            ann_inv = -curr_expense
+            
+        end_val = curr_corpus * (1 + expected_return) + ann_inv * (1 + expected_return)
+        
+        schedule.append({
+            "age": curr_age,
+            "corpus": round(curr_corpus, 2),
+            "income": round(curr_income, 2),
+            "expense": round(curr_expense, 2),
+            "investment": round(ann_inv, 2),
+            "end_val": round(end_val, 2)
+        })
+        
+        if end_val < 0 and fault_age is None:
+            fault_age = curr_age
+            
+        # Update for next year
+        curr_age += 1
+        curr_corpus = end_val if end_val > 0 else 0
+        if curr_age < target_age:
+            curr_income = curr_income * (1 + salary_growth)
+        else:
+            curr_income = 0
+        curr_expense = curr_expense * (1 + inflation)
+        
+    return {
+        "years_to_retire": years_to_retire,
+        "expense_at_retirement": round(expense_at_retirement, 2),
+        "fire_25x": round(fire_25x, 2),
+        "fire_30x": round(fire_30x, 2),
+        "schedule": schedule,
+        "fault_age": fault_age
+    }
+
 def calculate_compound_interest(principal, rate_percent, times_compounded_per_year, years):
     """
     A = P * (1 + r/n)**(n*t)
