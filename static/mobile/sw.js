@@ -1,15 +1,30 @@
-const CACHE_NAME = 'pennybook-mobile-v13';
+const CACHE_NAME = 'pennybook-mobile-v16';
 const urlsToCache = [
   '/m',
   '/mobile-manifest.json',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
-  'https://unpkg.com/html5-qrcode'
+  '/static/logo.png',
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
+      .then(() => self.skipWaiting()) // Force immediate install
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName); // Clean old caches
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -18,7 +33,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
   
   event.respondWith(
-    caches.match(event.request)
+    caches.match(event.request, { ignoreSearch: true }) // ignore ?query= params
       .then(response => {
         // Return cached response if found
         if (response) {
@@ -30,10 +45,6 @@ self.addEventListener('fetch', event => {
             if(!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-            // IMPORTANT: Clone the response. A response is a stream
-            // and because we want the browser to consume the response
-            // as well as the cache consuming the response, we need
-            // to clone it so we have two streams.
             var responseToCache = response.clone();
 
             caches.open(CACHE_NAME)
@@ -43,7 +54,13 @@ self.addEventListener('fetch', event => {
 
             return response;
           }
-        );
+        ).catch(function(err) {
+            // Fallback for offline mode navigation
+            if (event.request.mode === 'navigate') {
+                return caches.match('/m', { ignoreSearch: true });
+            }
+            throw err;
+        });
       })
   );
 });

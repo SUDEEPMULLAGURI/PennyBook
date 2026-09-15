@@ -9,6 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/logo.png">
+    <link rel="icon" type="image/png" href="/static/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -139,9 +141,36 @@
             transition: 0.3s; z-index: 2000;
         }
         .toast.show { transform: translate(-50%, 0); }
+        
+        /* Custom Install Modal */
+        #install-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 3000;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-content {
+            background: var(--surface); padding: 24px; border-radius: 20px;
+            width: 100%; max-width: 320px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal-content h3 { margin-top: 0; margin-bottom: 12px; }
+        .modal-content p { color: var(--text-sec); font-size: 15px; line-height: 1.4; margin-bottom: 24px; }
+        .btn-close-modal {
+            background: var(--surface-variant); color: var(--text); border: none;
+            padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Custom Install Modal -->
+    <div id="install-modal">
+        <div class="modal-content">
+            <h3 id="install-modal-title">Install App</h3>
+            <p id="install-modal-text">To install, tap the browser menu and select <b>Add to Home screen</b>.</p>
+            <button class="btn-close-modal" onclick="document.getElementById('install-modal').style.display='none'">Got it</button>
+        </div>
+    </div>
 
     <div id="fs-overlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:rgba(18,18,18,0.9); backdrop-filter:blur(5px); display:flex; justify-content:center; align-items:center; color:var(--primary); font-size:18px; font-weight:600; cursor:pointer;">
         👆 Tap anywhere to launch App
@@ -193,10 +222,14 @@
         </div>
 
         <div id="group-wrapper">
-            <div class="form-group label-float">
+            <div class="form-group label-float" style="margin-bottom: 8px;">
                 <label>Select Group</label>
                 <select id="m-group"><option>Loading...</option></select>
             </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+                <button type="button" id="btn-show-settlements" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">Show Optimized Settlements</button>
+            </div>
+            <div id="settlements-display" style="display:none; background: var(--surface-variant); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px;"></div>
             
             <div class="form-group label-float" id="wrap-pb-from" style="display:none;">
                 <label>From (Payer)</label>
@@ -243,21 +276,36 @@
         // PWA Install
         let deferredPrompt;
         const banner = document.getElementById('install-banner');
+        const modal = document.getElementById('install-modal');
+        const modalText = document.getElementById('install-modal-text');
         
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || window.matchMedia('(display-mode: fullscreen)').matches) {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || window.matchMedia('(display-mode: fullscreen)').matches;
+        
+        if (isStandalone) {
             banner.style.display = 'none';
         } else {
+            banner.style.display = 'block';
+            banner.innerHTML = '📱 Tap here to install full App';
+            
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                banner.style.display = 'block';
             });
+            
             banner.addEventListener('click', async () => {
-                if(deferredPrompt) {
+                if (deferredPrompt) {
                     deferredPrompt.prompt();
                     const { outcome } = await deferredPrompt.userChoice;
-                    if(outcome === 'accepted') banner.style.display = 'none';
+                    if (outcome === 'accepted') banner.style.display = 'none';
                     deferredPrompt = null;
+                } else {
+                    if (isIOS) {
+                        modalText.innerHTML = 'To install on iOS:<br><br>Tap the <b>Share</b> icon (square with up arrow) at the bottom or top of your browser, then tap <b>Add to Home Screen</b>.';
+                    } else {
+                        modalText.innerHTML = 'To install on this device:<br><br>Tap your browser menu (usually three dots ⋮ in the top right) and select <b>Add to Home screen</b> or <b>Install App</b>.';
+                    }
+                    modal.style.display = 'flex';
                 }
             });
         }
@@ -423,7 +471,10 @@
             updateAccountDropdown();
         });
 
-        document.getElementById('m-group').addEventListener('change', updateGroupMembers);
+        document.getElementById('m-group').addEventListener('change', () => {
+            updateGroupMembers();
+            document.getElementById('settlements-display').style.display = 'none';
+        });
         
         function updateGroupMembers() {
             const gId = parseInt(document.getElementById('m-group').value);
@@ -446,6 +497,36 @@
                 document.getElementById('split-inputs').innerHTML = '';
             }
         }
+
+        document.getElementById('btn-show-settlements').addEventListener('click', async () => {
+            const gId = document.getElementById('m-group').value;
+            if(!gId || isNaN(gId)) return alert('Select a group first');
+            const disp = document.getElementById('settlements-display');
+            disp.style.display = 'block';
+            disp.innerHTML = 'Calculating...';
+            
+            try {
+                const res = await fetch(`/api/groups/${gId}/settlements`);
+                if(res.ok) {
+                    const settlements = await res.json();
+                    if(settlements.length === 0) {
+                        disp.innerHTML = 'Group is fully settled! 🎉';
+                    } else {
+                        disp.innerHTML = '<div style="font-weight:600; margin-bottom:8px; color:var(--primary);">Optimized Settlements:</div>' + 
+                            settlements.map(s => `
+                            <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <span><b style="color:white;">${s.from}</b> pays <b style="color:white;">${s.to}</b></span>
+                                <span style="color:var(--danger); font-weight:600;">₹${s.amount.toFixed(2)}</span>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    disp.innerHTML = 'Failed to fetch settlements.';
+                }
+            } catch(e) {
+                disp.innerHTML = 'Error fetching settlements. Are you offline?';
+            }
+        });
 
         document.getElementById('m-split-type').addEventListener('change', renderSplits);
 

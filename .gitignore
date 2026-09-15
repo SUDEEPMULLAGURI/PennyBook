@@ -1,40 +1,35 @@
-# Python caches
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# PyInstaller build directories
+*.so
 build/
 dist/
-
-# Inno Setup compiler output folder
-Output/
-
-# SQLite databases (local user data)
+*.spec
 *.db
-pennybook.db
-pennybook.db-journal
-pennybook.db-wal
-pennybook.db-shm
+*.sqlite3
 
-# User uploaded receipts
-receipts/
+# Node/React/Electron
+node_modules/
+dist-electron/
+release/
+.vite/
 
-# Python virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# IDE settings
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.swp
-
-# OS-specific files
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-Desktop.ini
+Output/
